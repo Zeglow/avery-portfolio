@@ -1,0 +1,55 @@
+name: Build with Footprint Config
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create config.js from secrets
+      run: |
+        echo "// Auto-generated config file from GitHub Secrets" > config.js
+        echo "window.FOOTPRINT_CONFIG = {" >> config.js
+        echo "  binId: '${{ secrets.FOOTPRINT_BIN_ID }}'," >> config.js
+        echo "  apiKey: '${{ secrets.FOOTPRINT_API_KEY }}'," >> config.js
+        echo "  enabled: true" >> config.js
+        echo "};" >> config.js
+        echo "✅ Config file created successfully"
+        
+    - name: Verify config file
+      run: |
+        if [ -f "config.js" ]; then
+          echo "✅ config.js exists and ready for deployment"
+          echo "First few lines of config.js:"
+          head -3 config.js
+        else
+          echo "❌ Failed to create config.js"
+          exit 1
+        fi
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: portfolio-with-config
+        path: |
+          .
+          !.git
+          !node_modules
+          !.github
+        retention-days: 5
+        
+    - name: Build Summary
+      run: |
+        echo "🚀 Build completed successfully!"
+        echo "📁 Files ready for deployment:"
+        ls -la *.html *.js *.css 2>/dev/null || echo "Static files prepared"
+        echo "🔒 Config file securely generated from GitHub Secrets"
+        echo "📥 Artifacts uploaded and ready for manual deployment" 
