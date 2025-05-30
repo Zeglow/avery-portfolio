@@ -1,11 +1,11 @@
-name: Build and Deploy Portfolio with Footprint Config
+name: Generate Deployment Package with Footprint Config
 
 on:
   push:
     branches: [ main, master ]
 
 jobs:
-  build-and-deploy:
+  build-deployment-package:
     runs-on: ubuntu-latest
     
     steps:
@@ -28,23 +28,14 @@ jobs:
       run: |
         if [ -f "config.js" ]; then
           echo "✅ config.js exists and ready for deployment"
-          echo "Config file content:"
-          cat config.js
+          echo "Config file content (without sensitive data):"
+          echo "window.FOOTPRINT_CONFIG = { binId: '[REDACTED]', apiKey: '[REDACTED]', enabled: true };"
         else
           echo "❌ Failed to create config.js"
           exit 1
         fi
         
-    - name: Deploy to Vercel
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-args: '--prod'
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        working-directory: ./
-        
-    - name: Upload deployment files (backup)
+    - name: Upload deployment package
       uses: actions/upload-artifact@v4
       with:
         name: portfolio-ready-to-deploy
@@ -55,4 +46,13 @@ jobs:
           !node_modules
           !.gitignore
           !README*.md
-        retention-days: 30 
+          !SECURITY-CLEANUP.md
+        retention-days: 30
+        
+    - name: Deployment Instructions
+      run: |
+        echo "🎯 Deployment package ready!"
+        echo "📥 Download the 'portfolio-ready-to-deploy' artifact"
+        echo "📁 Extract the files"
+        echo "🚀 Run: vercel --prod"
+        echo "✅ Your footprint counter will maintain consistency!" 
