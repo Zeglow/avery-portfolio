@@ -1,11 +1,11 @@
-name: Build and Deploy to Vercel with Footprint Config
+name: Build Portfolio with Footprint Config
 
 on:
   push:
     branches: [ main, master ]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -14,39 +14,48 @@ jobs:
       
     - name: Create config.js from secrets
       run: |
-        echo "// Auto-generated config file from GitHub Secrets" > config.js
-        echo "window.FOOTPRINT_CONFIG = {" >> config.js
-        echo "  binId: '${{ secrets.FOOTPRINT_BIN_ID }}'," >> config.js
-        echo "  apiKey: '${{ secrets.FOOTPRINT_API_KEY }}'," >> config.js
-        echo "  enabled: true" >> config.js
-        echo "};" >> config.js
+        cat > config.js << 'EOF'
+        // Auto-generated config file from GitHub Secrets
+        window.FOOTPRINT_CONFIG = {
+          binId: '${{ secrets.FOOTPRINT_BIN_ID }}',
+          apiKey: '${{ secrets.FOOTPRINT_API_KEY }}',
+          enabled: true
+        };
+        EOF
         echo "✅ Config file created successfully"
         
     - name: Verify config file
       run: |
         if [ -f "config.js" ]; then
           echo "✅ config.js exists and ready for deployment"
-          echo "First few lines of config.js:"
-          head -3 config.js
+          echo "Config file content:"
+          cat config.js
         else
           echo "❌ Failed to create config.js"
           exit 1
         fi
         
-    - name: Install Vercel CLI
-      run: npm install --global vercel@latest
-      
-    - name: Pull Vercel Environment Information
-      run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      
-    - name: Build Project Artifacts
-      run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      
-    - name: Deploy Project Artifacts to Vercel
-      run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+    - name: Upload deployment files
+      uses: actions/upload-artifact@v4
+      with:
+        name: portfolio-ready-to-deploy
+        path: |
+          .
+          !.git
+          !.github
+          !node_modules
+          !.gitignore
+          !README*.md
+        retention-days: 30
         
-    - name: Deploy Summary
+    - name: Build Summary
       run: |
-        echo "🚀 Deployment completed successfully!"
-        echo "📝 Config file was included in deployment"
-        echo "🔒 API keys are securely managed via GitHub Secrets" 
+        echo "🚀 Build completed successfully!"
+        echo "📦 Files ready for deployment are uploaded as artifacts"
+        echo "📝 config.js included with API keys from GitHub Secrets"
+        echo "⬇️ Download the artifact and deploy manually to Vercel"
+        echo ""
+        echo "Manual deployment steps:"
+        echo "1. Download 'portfolio-ready-to-deploy' artifact from this workflow"
+        echo "2. Extract the files"
+        echo "3. Deploy to Vercel using CLI: 'vercel --prod' or via dashboard" 
