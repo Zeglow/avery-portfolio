@@ -787,6 +787,11 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
+        .footprint-message.error {
+            color: #ff6b6b;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .footprint-section {
@@ -1352,41 +1357,122 @@
             const footprintCount = document.getElementById('footprint-count');
             const footprintMessage = document.getElementById('footprint-message');
             
-            // Initialize footprint count
-            let totalFootprints = localStorage.getItem('totalFootprints') || 0;
+            // API配置 - 使用JSONBin.io免费服务
+            const API_URL = 'https://api.jsonbin.io/v3/b/6756d8f1ad19ca34f8c4c8e8';
+            const API_KEY = '$2a$10$8jYjHF9V.OQzEwM5g.Ep5uR3NJGDqUjpzKVPr.x8Q8fGV8U3YzJJu';
+            
             let userFootprint = localStorage.getItem('userFootprint') || false;
             
-            footprintCount.textContent = totalFootprints;
+            // 初始化时获取服务器端的足迹总数
+            fetchFootprintCount();
             
             // Check if user already left footprint
             if (userFootprint === 'true') {
                 footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
                 footprintBtn.disabled = true;
-                showMessage('You have already left your footprint here! 🐾', 'already');
+            }
+            
+            async function fetchFootprintCount() {
+                try {
+                    footprintCount.textContent = '...';
+                    const response = await fetch(API_URL + '/latest', {
+                        method: 'GET',
+                        headers: {
+                            'X-Master-Key': API_KEY
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const totalFootprints = data.record.footprints || 0;
+                        footprintCount.textContent = totalFootprints;
+                    } else {
+                        // 如果API失败，使用localStorage作为备选
+                        const localCount = localStorage.getItem('totalFootprints') || 0;
+                        footprintCount.textContent = localCount;
+                    }
+                } catch (error) {
+                    console.log('API error, using local storage:', error);
+                    const localCount = localStorage.getItem('totalFootprints') || 0;
+                    footprintCount.textContent = localCount;
+                }
+            }
+            
+            async function updateFootprintCount() {
+                try {
+                    // 先获取当前总数
+                    const response = await fetch(API_URL + '/latest', {
+                        method: 'GET',
+                        headers: {
+                            'X-Master-Key': API_KEY
+                        }
+                    });
+                    
+                    let newTotal = 1;
+                    if (response.ok) {
+                        const data = await response.json();
+                        newTotal = (data.record.footprints || 0) + 1;
+                    }
+                    
+                    // 更新服务器端数据
+                    const updateResponse = await fetch(API_URL, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': API_KEY
+                        },
+                        body: JSON.stringify({
+                            footprints: newTotal
+                        })
+                    });
+                    
+                    if (updateResponse.ok) {
+                        footprintCount.textContent = newTotal;
+                        return true;
+                    } else {
+                        throw new Error('Update failed');
+                    }
+                } catch (error) {
+                    console.log('API error, using local storage:', error);
+                    // API失败时使用localStorage备选方案
+                    let localCount = parseInt(localStorage.getItem('totalFootprints') || 0) + 1;
+                    localStorage.setItem('totalFootprints', localCount);
+                    footprintCount.textContent = localCount;
+                    return true;
+                }
             }
             
             // Handle footprint button click
-            footprintBtn.addEventListener('click', function() {
+            footprintBtn.addEventListener('click', async function() {
                 if (userFootprint === 'true') {
                     showMessage('You have already left your footprint here! 🐾', 'already');
                     return;
                 }
                 
-                // Increment total footprints
-                totalFootprints = parseInt(totalFootprints) + 1;
-                localStorage.setItem('totalFootprints', totalFootprints);
-                localStorage.setItem('userFootprint', 'true');
-                
-                // Update UI
-                footprintCount.textContent = totalFootprints;
-                footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
+                // 禁用按钮防止重复点击
                 footprintBtn.disabled = true;
+                footprintBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
                 
-                // Show success message
-                showMessage('Thank you for leaving your footprint!', 'success');
+                const success = await updateFootprintCount();
                 
-                // Add celebration effect
-                createCelebrationEffect();
+                if (success) {
+                    localStorage.setItem('userFootprint', 'true');
+                    userFootprint = 'true';
+                    
+                    // Update UI
+                    footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
+                    
+                    // Show success message
+                    showMessage('Thank you for leaving your footprint!', 'success');
+                    
+                    // Add celebration effect
+                    createCelebrationEffect();
+                } else {
+                    // 恢复按钮状态
+                    footprintBtn.disabled = false;
+                    footprintBtn.innerHTML = '<i class="fas fa-paw"></i> Leave Footprint';
+                    showMessage('Something went wrong, please try again.', 'error');
+                }
             });
             
             function showMessage(text, type) {
