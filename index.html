@@ -11,8 +11,12 @@
         // Try to load config.js if it exists (won't error if missing)
         const configScript = document.createElement('script');
         configScript.src = 'config.js';
+        configScript.async = false; // 确保同步加载
         configScript.onerror = function() {
             console.log('config.js not found, using alternative configuration methods');
+        };
+        configScript.onload = function() {
+            console.log('config.js loaded successfully');
         };
         document.head.appendChild(configScript);
     </script>
@@ -1374,6 +1378,22 @@
                 enabled: false
             };
             
+            // 等待配置加载完成后初始化
+            function waitForConfigAndInitialize() {
+                // 检查配置是否已加载
+                if (window.FOOTPRINT_CONFIG) {
+                    console.log('✅ 配置已加载，开始初始化足迹功能');
+                    JSONBIN_CONFIG.binId = window.FOOTPRINT_CONFIG.binId || '';
+                    JSONBIN_CONFIG.apiKey = window.FOOTPRINT_CONFIG.apiKey || '';
+                    JSONBIN_CONFIG.enabled = window.FOOTPRINT_CONFIG.enabled || false;
+                    initializeFootprints();
+                } else {
+                    console.log('⏳ 等待配置加载...');
+                    // 100ms后重试
+                    setTimeout(waitForConfigAndInitialize, 100);
+                }
+            }
+            
             // 多种安全的配置加载方式
             loadConfiguration();
             
@@ -1384,6 +1404,7 @@
                     JSONBIN_CONFIG.binId = urlParams.get('binId');
                     JSONBIN_CONFIG.apiKey = urlParams.get('apiKey');
                     JSONBIN_CONFIG.enabled = true;
+                    initializeFootprints();
                     return;
                 }
                 
@@ -1392,6 +1413,7 @@
                     JSONBIN_CONFIG.binId = window.FOOTPRINT_CONFIG.binId || '';
                     JSONBIN_CONFIG.apiKey = window.FOOTPRINT_CONFIG.apiKey || '';
                     JSONBIN_CONFIG.enabled = window.FOOTPRINT_CONFIG.enabled || false;
+                    initializeFootprints();
                     return;
                 }
                 
@@ -1402,6 +1424,7 @@
                     JSONBIN_CONFIG.binId = storedBinId;
                     JSONBIN_CONFIG.apiKey = storedApiKey;
                     JSONBIN_CONFIG.enabled = true;
+                    initializeFootprints();
                     return;
                 }
                 
@@ -1410,11 +1433,15 @@
                     JSONBIN_CONFIG.binId = process.env.FOOTPRINT_BIN_ID || '';
                     JSONBIN_CONFIG.apiKey = process.env.FOOTPRINT_API_KEY || '';
                     JSONBIN_CONFIG.enabled = !!(JSONBIN_CONFIG.binId && JSONBIN_CONFIG.apiKey);
-                    return;
+                    if (JSONBIN_CONFIG.enabled) {
+                        initializeFootprints();
+                        return;
+                    }
                 }
                 
-                // 如果都没有配置，则使用localStorage模式
-                console.log('JSONBin not configured, using localStorage mode');
+                // 如果都没有配置，等待配置加载或使用localStorage模式
+                console.log('等待配置加载或使用localStorage模式');
+                waitForConfigAndInitialize();
             }
             
             // 生成或获取用户唯一标识
@@ -1424,9 +1451,7 @@
                 localStorage.setItem('userId', userId);
             }
             
-            // 初始化页面时获取足迹数据
-            initializeFootprints();
-            
+            // 初始化页面时获取足迹数据 - 通过配置加载逻辑调用
             async function initializeFootprints() {
                 if (JSONBIN_CONFIG.enabled && JSONBIN_CONFIG.binId && JSONBIN_CONFIG.apiKey) {
                     try {
