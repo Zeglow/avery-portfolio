@@ -640,6 +640,172 @@
             line-height: 1.5;
             margin: 0;
         }
+
+        /* Footprint Section Styles */
+        .footprint-section {
+            /* background: linear-gradient(135deg, #c5cdf4 0%, #d9c6ec 100%); */
+            background: #f8f9fa;
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footprint-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="70" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="90" cy="80" r="1.2" fill="rgba(255,255,255,0.1)"/><circle cx="10" cy="60" r="0.8" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-100px); }
+        }
+
+        .footprint-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 0rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footprint-section h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            /* text-shadow: 0 2px 4px rgba(0,0,0,0.3); */
+        }
+
+        .footprint-description {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .footprint-counter {
+            /* background: #83a3ee;
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 1rem 2rem;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            border: 1px solid #83a3ee; */
+
+            background: linear-gradient(45deg, #83a3ee,#83a3ee);
+            color:  white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .counter-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .counter-number {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .footprint-button {
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            color:  white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .footprint-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #ff5252, #ff9500);
+        }
+
+        .footprint-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .footprint-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .footprint-message {
+            margin-top: 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s ease;
+            min-height: 1.5rem;
+        }
+
+        .footprint-message.show {
+            opacity: 1;
+            transform: translateY(-5px);
+        }
+
+        .footprint-message.success {
+            color: #83a3ee;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .footprint-message.already {
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .footprint-section {
+                padding: 2rem 0;
+            }
+            
+            .footprint-section h3 {
+                font-size: 1.5rem;
+            }
+            
+            .footprint-container {
+                padding: 0 1rem;
+            }
+            
+            .footprint-button {
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1006,6 +1172,26 @@
         </div>
     </div>
 
+    <!-- Footprint Section -->
+    <section class="footprint-section">
+        <div class="footprint-container">
+            <h3>👣 Leave Your Footprint</h3>
+            <!-- <p class="footprint-description">Thank you for visiting my portfolio! Leave a footprint to show you were here.</p>
+             -->
+            <div class="footprint-counter">
+                <span class="counter-text">Footprints: </span>
+                <span id="footprint-count" class="counter-number">0</span>
+            </div>
+            
+            <button id="footprint-btn" class="footprint-button">
+                <i class="fas fa-paw"></i>
+                Leave Footprint
+            </button>
+            
+            <div id="footprint-message" class="footprint-message"></div>
+        </div>
+    </section>
+
     <script>
         // Toggle job details function
         function toggleJobDetails(element) {
@@ -1057,6 +1243,108 @@
                     item.style.color = 'white';
                 }
             });
+        });
+        
+        // Footprint functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const footprintBtn = document.getElementById('footprint-btn');
+            const footprintCount = document.getElementById('footprint-count');
+            const footprintMessage = document.getElementById('footprint-message');
+            
+            // Initialize footprint count
+            let totalFootprints = localStorage.getItem('totalFootprints') || 0;
+            let userFootprint = localStorage.getItem('userFootprint') || false;
+            
+            footprintCount.textContent = totalFootprints;
+            
+            // Check if user already left footprint
+            if (userFootprint === 'true') {
+                footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
+                footprintBtn.disabled = true;
+                showMessage('You have already left your footprint here! 🐾', 'already');
+            }
+            
+            // Handle footprint button click
+            footprintBtn.addEventListener('click', function() {
+                if (userFootprint === 'true') {
+                    showMessage('You have already left your footprint here! 🐾', 'already');
+                    return;
+                }
+                
+                // Increment total footprints
+                totalFootprints = parseInt(totalFootprints) + 1;
+                localStorage.setItem('totalFootprints', totalFootprints);
+                localStorage.setItem('userFootprint', 'true');
+                
+                // Update UI
+                footprintCount.textContent = totalFootprints;
+                footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
+                footprintBtn.disabled = true;
+                
+                // Show success message
+                showMessage('Thank you for leaving your footprint!', 'success');
+                
+                // Add celebration effect
+                createCelebrationEffect();
+            });
+            
+            function showMessage(text, type) {
+                footprintMessage.textContent = text;
+                footprintMessage.className = `footprint-message ${type} show`;
+                
+                setTimeout(() => {
+                    footprintMessage.classList.remove('show');
+                }, 3000);
+            }
+            
+            function createCelebrationEffect() {
+                // Create multiple emoji particles
+                const emojis = ['🎉', '👣', '🌟', '💫'];
+                
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                        particle.style.cssText = `
+                            position: fixed;
+                            font-size: 1.5rem;
+                            pointer-events: none;
+                            z-index: 9999;
+                            left: ${Math.random() * window.innerWidth}px;
+                            top: ${window.innerHeight}px;
+                            animation: celebrationFloat 3s ease-out forwards;
+                        `;
+                        
+                        // Add animation keyframes if not already added
+                        if (!document.querySelector('#celebration-styles')) {
+                            const style = document.createElement('style');
+                            style.id = 'celebration-styles';
+                            style.textContent = `
+                                @keyframes celebrationFloat {
+                                    0% {
+                                        transform: translateY(0) rotate(0deg);
+                                        opacity: 1;
+                                    }
+                                    100% {
+                                        transform: translateY(-100vh) rotate(360deg);
+                                        opacity: 0;
+                                    }
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }
+                        
+                        document.body.appendChild(particle);
+                        
+                        // Remove particle after animation
+                        setTimeout(() => {
+                            if (particle.parentNode) {
+                                particle.parentNode.removeChild(particle);
+                            }
+                        }, 3000);
+                    }, i * 100);
+                }
+            }
         });
     </script>
 </body>
