@@ -1,13 +1,11 @@
-name: Build with Footprint Config
+name: Build and Deploy to Vercel with Footprint Config
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -35,21 +33,20 @@ jobs:
           exit 1
         fi
         
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: portfolio-with-config
-        path: |
-          .
-          !.git
-          !node_modules
-          !.github
-        retention-days: 5
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+      
+    - name: Pull Vercel Environment Information
+      run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      
+    - name: Build Project Artifacts
+      run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+    - name: Deploy Project Artifacts to Vercel
+      run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
         
-    - name: Build Summary
+    - name: Deploy Summary
       run: |
-        echo "🚀 Build completed successfully!"
-        echo "📁 Files ready for deployment:"
-        ls -la *.html *.js *.css 2>/dev/null || echo "Static files prepared"
-        echo "🔒 Config file securely generated from GitHub Secrets"
-        echo "📥 Artifacts uploaded and ready for manual deployment" 
+        echo "🚀 Deployment completed successfully!"
+        echo "📝 Config file was included in deployment"
+        echo "🔒 API keys are securely managed via GitHub Secrets" 
