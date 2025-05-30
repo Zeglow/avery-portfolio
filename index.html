@@ -6,6 +6,16 @@
     <title>Avery(Weiyu) Qiu</title>
     <!-- Add Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Optional: Load configuration file if it exists -->
+    <script>
+        // Try to load config.js if it exists (won't error if missing)
+        const configScript = document.createElement('script');
+        configScript.src = 'config.js';
+        configScript.onerror = function() {
+            console.log('config.js not found, using alternative configuration methods');
+        };
+        document.head.appendChild(configScript);
+    </script>
     <style>
         * {
             margin: 0;
@@ -1357,8 +1367,55 @@
             const footprintCount = document.getElementById('footprint-count');
             const footprintMessage = document.getElementById('footprint-message');
             
-            // API基础URL - 替换为你的后端地址
-            const API_BASE = 'https://your-api-domain.com/api';
+            // JSONBin配置 - 安全配置方式
+            const JSONBIN_CONFIG = {
+                binId: '',
+                apiKey: '',
+                enabled: false
+            };
+            
+            // 多种安全的配置加载方式
+            loadConfiguration();
+            
+            function loadConfiguration() {
+                // 方式1: 从URL参数获取（适用于部署时动态配置）
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('binId') && urlParams.get('apiKey')) {
+                    JSONBIN_CONFIG.binId = urlParams.get('binId');
+                    JSONBIN_CONFIG.apiKey = urlParams.get('apiKey');
+                    JSONBIN_CONFIG.enabled = true;
+                    return;
+                }
+                
+                // 方式2: 从全局配置对象获取（可在单独的配置文件中设置）
+                if (window.FOOTPRINT_CONFIG) {
+                    JSONBIN_CONFIG.binId = window.FOOTPRINT_CONFIG.binId || '';
+                    JSONBIN_CONFIG.apiKey = window.FOOTPRINT_CONFIG.apiKey || '';
+                    JSONBIN_CONFIG.enabled = window.FOOTPRINT_CONFIG.enabled || false;
+                    return;
+                }
+                
+                // 方式3: 从localStorage获取（用户可在控制台设置）
+                const storedBinId = localStorage.getItem('footprint_bin_id');
+                const storedApiKey = localStorage.getItem('footprint_api_key');
+                if (storedBinId && storedApiKey) {
+                    JSONBIN_CONFIG.binId = storedBinId;
+                    JSONBIN_CONFIG.apiKey = storedApiKey;
+                    JSONBIN_CONFIG.enabled = true;
+                    return;
+                }
+                
+                // 方式4: 从环境变量获取（需要构建工具支持）
+                if (typeof process !== 'undefined' && process.env) {
+                    JSONBIN_CONFIG.binId = process.env.FOOTPRINT_BIN_ID || '';
+                    JSONBIN_CONFIG.apiKey = process.env.FOOTPRINT_API_KEY || '';
+                    JSONBIN_CONFIG.enabled = !!(JSONBIN_CONFIG.binId && JSONBIN_CONFIG.apiKey);
+                    return;
+                }
+                
+                // 如果都没有配置，则使用localStorage模式
+                console.log('JSONBin not configured, using localStorage mode');
+            }
             
             // 生成或获取用户唯一标识
             let userId = localStorage.getItem('userId');
@@ -1371,25 +1428,91 @@
             initializeFootprints();
             
             async function initializeFootprints() {
-                try {
-                    // 获取总足迹数
-                    const totalResponse = await fetch(`${API_BASE}/footprints/total`);
-                    const totalData = await totalResponse.json();
-                    footprintCount.textContent = totalData.total || 0;
+                if (JSONBIN_CONFIG.enabled && JSONBIN_CONFIG.binId && JSONBIN_CONFIG.apiKey) {
+                    try {
+                        await loadFromJSONBin();
+                    } catch (error) {
+                        console.error('Failed to load from JSONBin:', error);
+                        fallbackToLocalStorage();
+                    }
+                } else {
+                    fallbackToLocalStorage();
+                }
+            }
+            
+            async function loadFromJSONBin() {
+                footprintCount.textContent = '...';
+                
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}/latest`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': JSONBIN_CONFIG.apiKey
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const footprintData = data.record;
                     
-                    // 检查当前用户是否已留足迹
-                    const userResponse = await fetch(`${API_BASE}/footprints/check/${userId}`);
-                    const userData = await userResponse.json();
+                    // 更新总数
+                    footprintCount.textContent = footprintData.total || 0;
                     
-                    if (userData.hasFootprint) {
+                    // 检查用户是否已留足迹
+                    const userFootprints = footprintData.users || [];
+                    const hasFootprint = userFootprints.includes(userId);
+                    
+                    if (hasFootprint) {
                         footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
                         footprintBtn.disabled = true;
                         showMessage('You have already left your footprint here! 🐾', 'already');
                     }
+                } else {
+                    throw new Error('Failed to fetch from JSONBin');
+                }
+            }
+            
+            async function saveToJSONBin() {
+                try {
+                    // 先获取当前数据
+                    const getResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}/latest`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Master-Key': JSONBIN_CONFIG.apiKey
+                        }
+                    });
+                    
+                    let footprintData = { total: 0, users: [] };
+                    if (getResponse.ok) {
+                        const data = await getResponse.json();
+                        footprintData = data.record;
+                    }
+                    
+                    // 检查用户是否已存在
+                    if (!footprintData.users.includes(userId)) {
+                        footprintData.users.push(userId);
+                        footprintData.total = footprintData.users.length;
+                        
+                        // 更新数据
+                        const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Master-Key': JSONBIN_CONFIG.apiKey
+                            },
+                            body: JSON.stringify(footprintData)
+                        });
+                        
+                        if (updateResponse.ok) {
+                            footprintCount.textContent = footprintData.total;
+                            return true;
+                        }
+                    } else {
+                        showMessage('You have already left your footprint here! 🐾', 'already');
+                        return false;
+                    }
                 } catch (error) {
-                    console.error('Failed to initialize footprints:', error);
-                    // 失败时回退到本地存储
-                    fallbackToLocalStorage();
+                    console.error('JSONBin error:', error);
+                    throw error;
                 }
             }
             
@@ -1397,41 +1520,47 @@
             footprintBtn.addEventListener('click', async function() {
                 if (footprintBtn.disabled) return;
                 
-                try {
-                    footprintBtn.disabled = true;
-                    footprintBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leaving...';
-                    
-                    // 发送留足迹请求
-                    const response = await fetch(`${API_BASE}/footprints`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            userId: userId,
-                            timestamp: new Date().toISOString(),
-                            userAgent: navigator.userAgent
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        // 更新UI
-                        footprintCount.textContent = data.total;
-                        footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
-                        showMessage('Thank you for leaving your footprint!', 'success');
-                        createCelebrationEffect();
-                    } else {
-                        throw new Error(data.message || 'Failed to leave footprint');
+                footprintBtn.disabled = true;
+                footprintBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leaving...';
+                
+                let success = false;
+                
+                if (JSONBIN_CONFIG.enabled && JSONBIN_CONFIG.binId && JSONBIN_CONFIG.apiKey) {
+                    try {
+                        success = await saveToJSONBin();
+                    } catch (error) {
+                        console.error('Failed to save to JSONBin, falling back to localStorage:', error);
+                        success = saveToLocalStorage();
                     }
-                } catch (error) {
-                    console.error('Failed to leave footprint:', error);
+                } else {
+                    success = saveToLocalStorage();
+                }
+                
+                if (success) {
+                    footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
+                    showMessage('Thank you for leaving your footprint!', 'success');
+                    createCelebrationEffect();
+                } else {
                     footprintBtn.disabled = false;
                     footprintBtn.innerHTML = '<i class="fas fa-paw"></i> Leave Footprint';
-                    showMessage('Failed to leave footprint. Please try again.', 'error');
                 }
             });
+            
+            function saveToLocalStorage() {
+                let userFootprint = localStorage.getItem('userFootprint') || false;
+                
+                if (userFootprint === 'true') {
+                    showMessage('You have already left your footprint here! 🐾', 'already');
+                    return false;
+                }
+                
+                let totalFootprints = parseInt(localStorage.getItem('totalFootprints') || 0) + 1;
+                localStorage.setItem('totalFootprints', totalFootprints);
+                localStorage.setItem('userFootprint', 'true');
+                
+                footprintCount.textContent = totalFootprints;
+                return true;
+            }
             
             // 失败时回退到原有的本地存储逻辑
             function fallbackToLocalStorage() {
@@ -1445,22 +1574,6 @@
                     footprintBtn.disabled = true;
                     showMessage('You have already left your footprint here! 🐾', 'already');
                 }
-                
-                footprintBtn.removeEventListener('click', arguments.callee);
-                footprintBtn.addEventListener('click', function() {
-                    if (userFootprint === 'true') return;
-                    
-                    totalFootprints = parseInt(totalFootprints) + 1;
-                    localStorage.setItem('totalFootprints', totalFootprints);
-                    localStorage.setItem('userFootprint', 'true');
-                    
-                    footprintCount.textContent = totalFootprints;
-                    footprintBtn.innerHTML = '<i class="fas fa-check"></i> Already Left';
-                    footprintBtn.disabled = true;
-                    
-                    showMessage('Thank you for leaving your footprint!', 'success');
-                    createCelebrationEffect();
-                });
             }
             
             function showMessage(text, type) {
@@ -1520,6 +1633,13 @@
                     }, i * 100);
                 }
             }
+            
+            // 开发者工具：在控制台设置配置
+            window.setFootprintConfig = function(binId, apiKey) {
+                localStorage.setItem('footprint_bin_id', binId);
+                localStorage.setItem('footprint_api_key', apiKey);
+                console.log('Footprint configuration saved. Please refresh the page.');
+            };
         });
     </script>
 </body>
